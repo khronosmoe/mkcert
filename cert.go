@@ -45,6 +45,7 @@ func init() {
 	if err == nil && u.Name != "" && u.Name != u.Username {
 		userAndHostname += " (" + u.Name + ")"
 	}
+	userAndHostname = "KHRONOS@HOMELAB"
 }
 
 func (m *mkcert) makeCert(hosts []string) {
@@ -59,7 +60,8 @@ func (m *mkcert) makeCert(hosts []string) {
 	// Certificates last for 2 years and 3 months, which is always less than
 	// 825 days, the limit that macOS/iOS apply to all certificates,
 	// including custom roots. See https://support.apple.com/en-us/HT210176.
-	expiration := time.Now().AddDate(2, 3, 0)
+	beginning, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", "2019-04-04 04:04:04 +0000 UTC")
+	expiration := beginning.AddDate(10, 0, 0)
 
 	tpl := &x509.Certificate{
 		SerialNumber: randomSerialNumber(),
@@ -68,7 +70,7 @@ func (m *mkcert) makeCert(hosts []string) {
 			OrganizationalUnit: []string{userAndHostname},
 		},
 
-		NotBefore: time.Now(), NotAfter: expiration,
+		NotBefore: beginning, NotAfter: expiration,
 
 		KeyUsage: x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 	}
@@ -225,13 +227,14 @@ func (m *mkcert) makeCertFromCSR() {
 	fatalIfErr(err, "failed to parse the CSR")
 	fatalIfErr(csr.CheckSignature(), "invalid CSR signature")
 
-	expiration := time.Now().AddDate(2, 3, 0)
+	beginning, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", "2019-04-04 04:04:04 +0000 UTC")
+	expiration := beginning.AddDate(10, 0, 0)
 	tpl := &x509.Certificate{
 		SerialNumber:    randomSerialNumber(),
 		Subject:         csr.Subject,
 		ExtraExtensions: csr.Extensions, // includes requested SANs, KUs and EKUs
 
-		NotBefore: time.Now(), NotAfter: expiration,
+		NotBefore: beginning, NotAfter: expiration,
 
 		// If the CSR does not request a SAN extension, fix it up for them as
 		// the Common Name field does not work in modern browsers. Otherwise,
@@ -324,6 +327,8 @@ func (m *mkcert) newCA() {
 
 	skid := sha1.Sum(spki.SubjectPublicKey.Bytes)
 
+	beginning, _ := time.Parse("2006-01-02 15:04:05 -0700 MST", "2019-04-04 04:04:04 +0000 UTC")
+	expiration := beginning.AddDate(10, 0, 0)
 	tpl := &x509.Certificate{
 		SerialNumber: randomSerialNumber(),
 		Subject: pkix.Name{
@@ -337,8 +342,7 @@ func (m *mkcert) newCA() {
 		},
 		SubjectKeyId: skid[:],
 
-		NotAfter:  time.Now().AddDate(10, 0, 0),
-		NotBefore: time.Now(),
+		NotBefore: beginning, NotAfter: expiration,
 
 		KeyUsage: x509.KeyUsageCertSign,
 
